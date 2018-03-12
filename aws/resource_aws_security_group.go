@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -199,6 +201,11 @@ func resourceAwsSecurityGroup() *schema.Resource {
 				Set: resourceAwsSecurityGroupRuleHash,
 			},
 
+			"arn": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
 			"owner_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -358,6 +365,15 @@ func resourceAwsSecurityGroupRead(d *schema.ResourceData, meta interface{}) erro
 	ingressRules := matchRules("ingress", localIngressRules, remoteIngressRules)
 	egressRules := matchRules("egress", localEgressRules, remoteEgressRules)
 
+	sgArn := arn.ARN{
+		AccountID: aws.StringValue(sg.OwnerId),
+		Partition: meta.(*AWSClient).partition,
+		Region:    meta.(*AWSClient).region,
+		Resource:  fmt.Sprintf("security-group/%s", aws.StringValue(sg.GroupId)),
+		Service:   ec2.ServiceName,
+	}
+
+	d.Set("arn", sgArn.String())
 	d.Set("description", sg.Description)
 	d.Set("name", sg.GroupName)
 	d.Set("vpc_id", sg.VpcId)
